@@ -6,7 +6,9 @@ from pycparser import c_ast, c_generator, c_parser, parse_file
 import argparse
 import hashlib
 import re
+import subprocess
 import sys
+import tempfile
 #import xml.etree.CElementTree as ElementTree
 import xml.etree.ElementTree as ElementTree
 
@@ -139,11 +141,39 @@ def processWitness(witness, benchmark, bitwidth):
   entryFun = validateConfig(graph, ns, witness, benchmark, bitwidth)
 
   benchmarkString = ''
-  with open(benchmark, 'r') as b:
-    for line in b:
-      line = re.sub(r'__attribute__\s*\(\(\s*[a-z_]+\s*\)\)\s*;', ';', line)
-      line = re.sub(r'//.*', '', line)
-      benchmarkString += line
+  with tempfile.NamedTemporaryFile() as fp:
+    subprocess.check_call(['gcc', '-x', 'c', '-E', benchmark, '-o', fp.name])
+    with open(fp.name, 'r') as b:
+      needStructBody = False
+      skipAsm = False
+      inAttribute = False
+      for line in b:
+        line = re.sub(r'__attribute__\s*\(\(\s*[a-z_, ]+\s*\)\)\s*', '', line)
+        line = re.sub(r'__attribute__\s*\(\(\s*[a-z_, ]+\s*\(\s*[a-zA-Z0-9_, ]+\s*\)\s*\)\)\s*', '', line)
+        line = re.sub(r'__extension__', '', line)
+        line = re.sub(r'__restrict', 'restrict', line)
+        line = re.sub(r'__inline__', 'inline', line)
+        line = re.sub(r'__inline', 'inline', line)
+        line = re.sub(r'__const', 'const', line)
+        line = re.sub(r'__signed__', 'signed', line)
+        line = re.sub(r'__builtin_va_list', 'int', line)
+        # a hack for some C-standards violating code in LDV benchmarks
+        if needStructBody and re.match(r'^\s*}\s*;\s*$', line):
+          line = 'int __dummy; ' + line
+          needStructBody = False
+        elif needStructBody:
+          needStructBody = re.match(r'^\s*$', line) is not None
+        elif re.match(r'^\s*struct\s+[a-zA-Z0-9_]+\s*{\s*$', line):
+          needStructBody = True
+        # remove inline asm
+        if re.match(r'^\s*__asm__\s+volatile\s*\([^;]*$', line):
+          skipAsm = True
+        elif skipAsm and re.search(r'\)\s*;\s*$', line):
+          line = '\n'
+          skipAsm = False
+        if skipAsm:
+          line = '\n'
+        benchmarkString += line
   parser = c_parser.CParser()
   ast = parser.parse(benchmarkString, filename=benchmark)
   # ast.show(showcoord=True)
