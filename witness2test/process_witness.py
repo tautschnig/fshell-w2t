@@ -254,7 +254,7 @@ def processWitness(witness, benchmark, bitwidth):
 
     n = trace[n]['target']
 
-  if not values:
+  if watch and not values:
     eprint('inputs: ')
     eprint(inputs)
     eprint('nondets: ')
