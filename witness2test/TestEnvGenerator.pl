@@ -258,7 +258,10 @@ foreach my $f (keys %all_edits) {
   if (defined($inserts{$f})) {
     print MAKEFILE "\tmv \$\@ \$\@_\n";
     print MAKEFILE "\techo '#include <math.h>' >> \$\@\n";
-    print MAKEFILE "\techo '$_' >> \$\@\n" foreach(@{ $inserts{$f} });
+    foreach my $i (@{ $inserts{$f} }) {
+      $i =~ s/'/'"'"'/g;
+      print MAKEFILE "\techo '$i' >> \$\@\n"
+    }
     print MAKEFILE "\tcp \$\@ harness.c\n";
     print MAKEFILE "\tcat \$\@_ >> \$\@\n";
     print MAKEFILE "\trm \$\@_\n";
@@ -266,7 +269,10 @@ foreach my $f (keys %all_edits) {
 
   if (defined($appends{$f})) {
     print MAKEFILE "\techo '" . $appends{$f}{init_name} . "(){' >> \$\@\n";
-    print MAKEFILE "\techo '  $_;' >> \$\@\n" foreach(@{ $appends{$f}{lines} });
+    foreach my $a (@{ $appends{$f}{lines} }) {
+      $a =~ s/'/'"'"'/g;
+      print MAKEFILE "\techo '  $a;' >> \$\@\n";
+    }
     print MAKEFILE "\techo '}' >> \$\@\n";
   }
   
