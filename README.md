@@ -1,4 +1,4 @@
-## CPROVER witness2test
+## FShell witness2test
 
 The tool witness2test converts a witness to a test case.
 More specifically, it takes a violation witness in GraphML format as input
