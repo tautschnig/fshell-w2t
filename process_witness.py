@@ -225,6 +225,7 @@ def processWitness(witness, benchmark, bitwidth):
 
   values = []
   n = entryNode
+  missing_nondets = set(nondets)
   while trace[n].get('target') is not None:
     if trace[n].get('assumption') is not None:
       # assumptions may use = or ==
@@ -241,6 +242,8 @@ def processWitness(witness, benchmark, bitwidth):
             watch.get(int(trace[n]['startline'])) is not None):
           w = watch[int(trace[n]['startline'])]
           values.append([w, v])
+          if w in missing_nondets:
+            missing_nondets.remove(w)
         elif (f is not None and
               isinstance(a_ast.lvalue, c_ast.ID) and
               inputs[f].get(a_ast.lvalue.name) is not None):
@@ -277,6 +280,11 @@ def processWitness(witness, benchmark, bitwidth):
       info = nondets[v[0]]
       print('  {t}@[file {f} line {l}]={value}'.format(
             t=info['type'], f=benchmark, l=info['line'], value=v[1]))
+
+  for n in missing_nondets:
+      info = nondets[n]
+      print('  {t}@[file {f} line {l}]=0'.format(
+            t=info['type'], f=benchmark, l=info['line']))
 
 
 def main():
