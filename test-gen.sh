@@ -84,7 +84,7 @@ PYTHONPATH=$SCRIPTDIR/pycparser-master \
   $BIT_WIDTH -w "$WITNESS_FILE" -b "$BM" > data
 $SCRIPTDIR/TestEnvGenerator.pl < data
 ec=0
-make -f tester.mk BUILD_FLAGS="-g $BIT_WIDTH -std=c99" > log 2>&1 || ec=$?
+make -f tester.mk BUILD_FLAGS="-g $BIT_WIDTH -std=c99 -fgnu89-inline" > log 2>&1 || ec=$?
 # be safe and generate one
 touch harness.c
 cp harness.c $SCRIPTDIR/
