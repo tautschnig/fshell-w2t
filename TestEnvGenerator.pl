@@ -123,7 +123,8 @@ foreach my $id (sort keys %test_suite) {
     next if ($sym->{code_done});
     if ($sym->{is_func}) {
       my $retval_type = $sym->{symbol};
-      $retval_type =~ s/^(.+)\s+\S+\(.*$/$1/;
+      $retval_type =~ s/^((.+)(\s+|\*))\S+\(.*$/$1/;
+      $retval_type =~ s/\s*$//;
       (defined($inserts{ $sym->{file} })) or $inserts{ $sym->{file} } = ();
       push @{ $inserts{ $sym->{file} } }, "extern unsigned __fshell2__tc_selector;";
       my $decl = $sym->{symbol};
