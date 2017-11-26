@@ -261,6 +261,7 @@ foreach my $f (keys %all_edits) {
     print MAKEFILE "\techo '#include <math.h>' >> \$\@\n";
     foreach my $i (@{ $inserts{$f} }) {
       $i =~ s/'/'"'"'/g;
+      $i =~ s/\\/\\\\/g;
       print MAKEFILE "\techo '$i' >> \$\@\n"
     }
     print MAKEFILE "\tcp \$\@ harness.c\n";
@@ -272,6 +273,7 @@ foreach my $f (keys %all_edits) {
     print MAKEFILE "\techo '" . $appends{$f}{init_name} . "(){' >> \$\@\n";
     foreach my $a (@{ $appends{$f}{lines} }) {
       $a =~ s/'/'"'"'/g;
+      $a =~ s/\\/\\\\/g;
       print MAKEFILE "\techo '  $a;' >> \$\@\n";
     }
     print MAKEFILE "\techo '}' >> \$\@\n";
