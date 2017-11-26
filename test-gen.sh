@@ -102,7 +102,7 @@ touch harness.c
 cp harness.c $SCRIPTDIR/
 case $PROP in
   unreach_call)
-    if ! grep -q "tester: .* __VERIFIER_error: Assertion \`0' failed." log ; then
+    if ! grep -q "tester: .* __VERIFIER_error.*: Assertion \`0' failed." log ; then
       cat log 1>&2
       echo "$BM: ERROR - failing assertion not found" 1>&2
       if [ $ec -eq 0 ] ; then
