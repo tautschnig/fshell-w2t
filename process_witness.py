@@ -45,7 +45,8 @@ def validateConfig(graph, ns, witness, benchmark, bitwidth):
       eprint('warning: SHA1 mismatch')
 
   spec = re.sub(r'\s+', '', config['specification'])
-  return re.sub(r'CHECK\(init\((\S+)\(\)\),LTL\((\S+)\)\)', '\g<1>', spec)
+  spec = re.sub(r'\n', '', spec)
+  return re.sub(r'^CHECK\(init\((\S+?)\(\)\),LTL\((\S+)\)\).*', '\g<1>', spec)
 
 
 def setupTypes(ast, entryFunc, inputs, nondets, entry):
