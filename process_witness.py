@@ -233,7 +233,7 @@ def processWitness(witness, benchmark, bitwidth):
       a = re.sub(r'\\result', '__SV_COMP_result', a)
       # we may be missing typedefs used in type casts
       a = re.sub(r'\([a-zA-Z0-9_]+\s*\*\)', '(int*)', a)
-      wrapped = 'void foo() { ' + a + '}'
+      wrapped = 'void foo() { ' + a + ';}'
       a_ast = parser.parse(wrapped).ext[0].body.block_items[0]
       if isinstance(a_ast, c_ast.Assignment):
         f = trace[n].get('assumption.scope')
