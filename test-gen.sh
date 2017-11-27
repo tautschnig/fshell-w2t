@@ -127,10 +127,16 @@ case $PROP in
       exit $ec
     fi
     echo "$BM: OK"
-    echo "FALSE"
+    echo "FALSE(no-overflow)"
     ;;
   memsafety)
-    if ! grep -q "^ASAN:DEADLYSIGNAL" log ; then
+    if grep -q "^SUMMARY: AddressSanitizer: bad-free" log ; then
+      echo "$BM: OK"
+      echo "FALSE(valid-free)"
+    elif grep -q "^SUMMARY: AddressSanitizer: SEGV" log ; then
+      echo "$BM: OK"
+      echo "FALSE(valid-deref)"
+    else
       cat log 1>&2
       echo "$BM: ERROR - failing memory safety violation not found" 1>&2
       if [ $ec -eq 0 ] ; then
@@ -140,8 +146,6 @@ case $PROP in
       fi
       exit $ec
     fi
-    echo "$BM: OK"
-    echo "FALSE"
     ;;
   *)
     echo "$BM: property $PROP not yet handled"
