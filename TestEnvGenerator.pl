@@ -250,7 +250,11 @@ foreach my $f (keys %all_edits) {
     foreach my $l (keys %{ $replaces{$f} }) {
       foreach my $s (keys %{ $replaces{$f}{$l} }) {
         print MAKEFILE "\tmv \$\@ \$\@_\n";
-        print MAKEFILE "\tsed '$l s/\\<$s\\>/ $replaces{$f}{$l}{$s}/' \$\@_ > \$\@\n";
+        if ($^O eq "darwin") {
+          print MAKEFILE "\tsed '$l s/[[:<:]]$s\[[:>:]\]/ $replaces{$f}{$l}{$s}/' \$\@_ > \$\@\n";
+        } else {
+          print MAKEFILE "\tsed '$l s/\\<$s\\>/ $replaces{$f}{$l}{$s}/' \$\@_ > \$\@\n";
+        }
         print MAKEFILE "\trm \$\@_\n";
       }
     }
