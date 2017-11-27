@@ -138,9 +138,12 @@ case $PROP in
     if grep -q "^SUMMARY: AddressSanitizer: bad-free" log ; then
       echo "$BM: OK"
       echo "FALSE(valid-free)"
-    elif grep -q "^SUMMARY: AddressSanitizer: SEGV" log ; then
+    elif egrep -q "^SUMMARY: AddressSanitizer: (SEGV|stack-buffer-overflow)" log ; then
       echo "$BM: OK"
       echo "FALSE(valid-deref)"
+    elif grep -q "^SUMMARY: AddressSanitizer: .* leaked in" log ; then
+      echo "$BM: OK"
+      echo "FALSE(valid-memtrack)"
     else
       cat log 1>&2
       echo "$BM: ERROR - failing memory safety violation not found" 1>&2
