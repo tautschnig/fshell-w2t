@@ -83,26 +83,68 @@ PYTHONPATH=$SCRIPTDIR/pycparser-master \
   python $SCRIPTDIR/process_witness.py \
   $BIT_WIDTH -w "$WITNESS_FILE" -b "$BM" > data
 $SCRIPTDIR/TestEnvGenerator.pl < data
+
+SAN_OPTS=""
+case $PROP in
+  overflow) SAN_OPTS="-fsanitize=signed-integer-overflow" ; export UBSAN_OPTIONS="halt_on_error=1" ;;
+  memsafety)
+    SAN_OPTS="-fsanitize=address"
+    if gcc -fsanitize=leak -x c -c /dev/null -o /dev/null > /dev/null 2>&1 ; then
+      SAN_OPTS+=" -fsanitize=leak"
+    fi
+    ;;
+esac
+
 ec=0
-make -f tester.mk BUILD_FLAGS="-g $BIT_WIDTH -std=c99 -fgnu89-inline" > log 2>&1 || ec=$?
+make -f tester.mk BUILD_FLAGS="-g $BIT_WIDTH -std=c99 -fgnu89-inline $SAN_OPTS" > log 2>&1 || ec=$?
 # be safe and generate one
 touch harness.c
 cp harness.c $SCRIPTDIR/
-if [ "$PROP" = "unreach_call" ] ; then
-  if ! grep -q "tester: .* __VERIFIER_error: Assertion \`0' failed." log ; then
-    cat log 1>&2
-    echo "$BM: ERROR - failing assertion not found" 1>&2
-    if [ $ec -eq 0 ] ; then
-      echo "TRUE"
-    else
-      echo "UNKNOWN"
+case $PROP in
+  unreach_call)
+    if ! grep -q "tester: .* __VERIFIER_error: Assertion \`0' failed." log ; then
+      cat log 1>&2
+      echo "$BM: ERROR - failing assertion not found" 1>&2
+      if [ $ec -eq 0 ] ; then
+        echo "TRUE"
+      else
+        echo "UNKNOWN"
+      fi
+      exit $ec
     fi
-    exit $ec
-  fi
-  echo "$BM: OK"
-  echo "FALSE"
-else
-  echo "$BM: property $PROP not yet handled"
-  echo "UNKNOWN"
-fi
-
+    echo "$BM: OK"
+    echo "FALSE"
+    ;;
+  overflow)
+    if ! grep -q "runtime error: signed integer overflow:" log ; then
+      cat log 1>&2
+      echo "$BM: ERROR - failing overflow violation not found" 1>&2
+      if [ $ec -eq 0 ] ; then
+        echo "TRUE"
+      else
+        echo "UNKNOWN"
+      fi
+      exit $ec
+    fi
+    echo "$BM: OK"
+    echo "FALSE"
+    ;;
+  memsafety)
+    if ! grep -q "^ASAN:DEADLYSIGNAL" log ; then
+      cat log 1>&2
+      echo "$BM: ERROR - failing memory safety violation not found" 1>&2
+      if [ $ec -eq 0 ] ; then
+        echo "TRUE"
+      else
+        echo "UNKNOWN"
+      fi
+      exit $ec
+    fi
+    echo "$BM: OK"
+    echo "FALSE"
+    ;;
+  *)
+    echo "$BM: property $PROP not yet handled"
+    echo "UNKNOWN"
+    ;;
+esac
