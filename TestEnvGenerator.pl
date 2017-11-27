@@ -6,6 +6,7 @@ my $in_input = 0;
 my $tc_counter = 0;
 my %test_suite = ();
 my %inserts = ();
+my %func_appends = ();
 my %replaces = ();
 my %appends = ();
 
@@ -125,8 +126,8 @@ foreach my $id (sort keys %test_suite) {
       my $retval_type = $sym->{symbol};
       $retval_type =~ s/^((.+)(\s+|\*))\S+\(.*$/$1/;
       $retval_type =~ s/\s*$//;
-      (defined($inserts{ $sym->{file} })) or $inserts{ $sym->{file} } = ();
-      push @{ $inserts{ $sym->{file} } }, "extern unsigned __fshell2__tc_selector;";
+      (defined($func_appends{ $sym->{file} })) or $func_appends{ $sym->{file} } = ();
+      push @{ $func_appends{ $sym->{file} } }, "extern unsigned __fshell2__tc_selector;";
       my $decl = $sym->{symbol};
       $decl =~ s/,/ ###,/g if ($decl =~ /,/);
       $decl =~ s/\)/ ###)/ if ($decl =~ /\(.+\)/ && !($decl =~ /\(\s*void\s*\)/));
@@ -135,24 +136,24 @@ foreach my $id (sort keys %test_suite) {
         $decl =~ s/ ###/ _$i/;
         $i++;
       }
-      push @{ $inserts{ $sym->{file} } }, "$decl\{";
-      push @{ $inserts{ $sym->{file} } }, "  static unsigned idx = 0;";
+      push @{ $func_appends{ $sym->{file} } }, "$decl\{";
+      push @{ $func_appends{ $sym->{file} } }, "  static unsigned idx = 0;";
       
       my @switch = ();
       push @switch, "  switch (__fshell2__tc_selector) {";
       foreach my $id2 (sort keys %test_suite) {
         defined($test_suite{$id2}{$key}) or next;
         my $sym2 = \%{ $test_suite{$id2}{$key} };
-        push @{ $inserts{ $sym->{file} } }, "  $retval_type retval$id2\[" .
+        push @{ $func_appends{ $sym->{file} } }, "  $retval_type retval$id2\[" .
           scalar(@{ $sym2->{vals} }) . "] = { " . join(",", (@{ $sym2->{vals} })) . " };";
         my $vals = "";
         $vals =~ s/^, //;
         push @switch, "    case ".($id2-1).": return retval$id2\[idx++];";
         $sym2->{code_done} = 1;
       }
-      push @{ $inserts{ $sym->{file} } }, @switch;
-      push @{ $inserts{ $sym->{file} } }, "  }";
-      push @{ $inserts{ $sym->{file} } }, "}";
+      push @{ $func_appends{ $sym->{file} } }, @switch;
+      push @{ $func_appends{ $sym->{file} } }, "  }";
+      push @{ $func_appends{ $sym->{file} } }, "}";
     } else {
       my $new_name = $sym->{symbol} . "_" . $sym->{file} . "_" . $sym->{line};
       $new_name =~ s/[\/\\:]/__/g;
@@ -230,16 +231,19 @@ clean:
 EOF
 print MAKEFILE "\trm -f $_.mod.c\n" foreach(keys %replaces);
 print MAKEFILE "\trm -f $_.mod.c\n" foreach(keys %inserts);
+print MAKEFILE "\trm -f $_.mod.c\n" foreach(keys %func_appends);
 
 print MAKEFILE "\ntester: tester.c ";
 print MAKEFILE join(".mod.c ", keys %replaces) .
-  (scalar(keys %replaces)?".mod.c ":" ") . join(".mod.c ", keys %inserts) .
+  (scalar(keys %replaces)?".mod.c ":" ") . join(".mod.c ", keys %func_appends) .
+  (scalar(keys %func_appends)?".mod.c ":" ") . join(".mod.c ", keys %inserts) .
   (scalar(keys %inserts)?".mod.c\n":"\n");
 print MAKEFILE "\t\$(CC) -o \$@ \$(BUILD_FLAGS) \$^\n\n";
 
 my %all_edits = ();
 @all_edits{ keys %replaces } = ();
 @all_edits{ keys %inserts } = ();
+@all_edits{ keys %func_appends } = ();
 @all_edits{ keys %appends } = ();
 
 foreach my $f (keys %all_edits) {
@@ -266,11 +270,20 @@ foreach my $f (keys %all_edits) {
     foreach my $i (@{ $inserts{$f} }) {
       $i =~ s/'/'"'"'/g;
       $i =~ s/\\/\\\\/g;
-      print MAKEFILE "\techo '$i' >> \$\@\n"
+      print MAKEFILE "\techo '$i' >> \$\@\n";
     }
     print MAKEFILE "\tcp \$\@ harness.c\n";
     print MAKEFILE "\tcat \$\@_ >> \$\@\n";
     print MAKEFILE "\trm \$\@_\n";
+  }
+
+  if (defined($func_appends{$f})) {
+    foreach my $i (@{ $func_appends{$f} }) {
+      $i =~ s/'/'"'"'/g;
+      $i =~ s/\\/\\\\/g;
+      print MAKEFILE "\techo '$i' >> \$\@\n";
+      print MAKEFILE "\techo '$i' >> harness.c\n";
+    }
   }
 
   if (defined($appends{$f})) {
