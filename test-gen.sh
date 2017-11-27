@@ -86,12 +86,17 @@ $SCRIPTDIR/TestEnvGenerator.pl < data
 
 SAN_OPTS=""
 case $PROP in
-  overflow) SAN_OPTS="-fsanitize=signed-integer-overflow" ; export UBSAN_OPTIONS="halt_on_error=1" ;;
+  overflow)
+    SAN_OPTS="-fsanitize=signed-integer-overflow"
+    export UBSAN_OPTIONS="halt_on_error=1"
+    perl -p -i -e 's/(void __VERIFIER_error\(\) \{) assert\(0\); (\})/$1$2/' tester.c
+    ;;
   memsafety)
     SAN_OPTS="-fsanitize=address"
     if gcc -fsanitize=leak -x c -c /dev/null -o /dev/null > /dev/null 2>&1 ; then
       SAN_OPTS+=" -fsanitize=leak"
     fi
+    perl -p -i -e 's/(void __VERIFIER_error\(\) \{) assert\(0\); (\})/$1$2/' tester.c
     ;;
 esac
 
