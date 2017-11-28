@@ -265,8 +265,8 @@ def processWitness(witness, benchmark, bitwidth):
     eprint(nondets)
     eprint('watch: ')
     eprint(watch)
-    eprint("No input values found in witness file")
-    sys.exit(1)
+    eprint("WARNING: no input values found in witness file, behaviour of harness may be undefined")
+
   print('IN:')
   print('  ENTRY {n}()@[file {f} line {l}]'.format(
         n=entryFun, f=benchmark, l=entry['line']))
