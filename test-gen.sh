@@ -138,7 +138,7 @@ case $PROP in
     if grep -q "^SUMMARY: AddressSanitizer: bad-free" log ; then
       echo "$BM: OK"
       echo "FALSE(valid-free)"
-    elif egrep -q "^SUMMARY: AddressSanitizer: (SEGV|stack-buffer-overflow)" log ; then
+    elif egrep -q "^SUMMARY: AddressSanitizer: (SEGV|stack-overflow|(stack|heap|global)-buffer-overflow)" log ; then
       echo "$BM: OK"
       echo "FALSE(valid-deref)"
     elif grep -q "^SUMMARY: AddressSanitizer: .* leaked in" log ; then
