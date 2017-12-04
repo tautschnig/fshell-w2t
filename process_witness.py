@@ -42,7 +42,7 @@ def validateConfig(graph, ns, witness, benchmark, bitwidth):
     if config['programhash'] != sha1hash:
       # eprint('INVALID WITNESS FILE: SHA1 mismatch')
       # sys.exit(1)
-      eprint('warning: SHA1 mismatch')
+      eprint('WARNING: SHA1 mismatch')
 
   spec = re.sub(r'\s+', '', config['specification'])
   spec = re.sub(r'\n', '', spec)
@@ -98,7 +98,7 @@ def checkTrace(trace, entryNode, violationNode):
   n = entryNode
   while trace[n].get('target') is not None:
     n = trace[n]['target']
-  if n != violationNode:
+  if violationNode and n != violationNode:
     eprint("INVALID WITNESS FILE: trace does not end in violation node")
     sys.exit(1)
 
@@ -123,13 +123,12 @@ def buildTrace(graph, ns, trace):
     eprint("INVALID WITNESS FILE: no entry node")
     sys.exit(1)
   if violationNode is None:
-    eprint("INVALID WITNESS FILE: no violation node")
-    sys.exit(1)
+    eprint("WARNING: no violation node")
 
   for e in graph.findall('./graphml:edge', ns):
     s = e.get('source')
     t = e.get('target')
-    if s == violationNode:
+    if violationNode and s == violationNode:
       continue
     elif sinks.get(t) is not None:
       continue
