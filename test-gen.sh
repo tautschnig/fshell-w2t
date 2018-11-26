@@ -87,7 +87,7 @@ $SCRIPTDIR/TestEnvGenerator.pl < data
 SAN_OPTS=""
 case $PROP in
   overflow)
-    SAN_OPTS="-fsanitize=signed-integer-overflow"
+    SAN_OPTS="-fsanitize=signed-integer-overflow,shift"
     export UBSAN_OPTIONS="halt_on_error=1"
     perl -p -i -e 's/(void __VERIFIER_error\(\) \{) assert\(0\); (\})/$1$2/' tester.c
     ;;
@@ -121,7 +121,16 @@ case $PROP in
     echo "FALSE"
     ;;
   overflow)
-    if ! grep -q "runtime error: signed integer overflow:" log ; then
+    if grep -q "runtime error: signed integer overflow:" log ; then
+      echo "$BM: OK"
+      echo "FALSE(no-overflow)"
+    elif egrep -q "runtime error: left shift of -?[[:digit:]]+ by [[:digit:]]+ places cannot be represented in type '.*'" log ; then
+      echo "$BM: OK"
+      echo "FALSE(no-overflow)"
+    elif egrep -q "runtime error: negation of -?[[:digit:]]+ cannot be represented in type '.*'" log ; then
+      echo "$BM: OK"
+      echo "FALSE(no-overflow)"
+    else
       cat log 1>&2
       echo "$BM: ERROR - failing overflow violation not found" 1>&2
       if [ $ec -eq 0 ] ; then
@@ -131,8 +140,6 @@ case $PROP in
       fi
       exit $ec
     fi
-    echo "$BM: OK"
-    echo "FALSE(no-overflow)"
     ;;
   memsafety)
     if grep -q "^SUMMARY: AddressSanitizer: bad-free" log ; then
