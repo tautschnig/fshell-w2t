@@ -12,6 +12,7 @@ if(/^CHECK\(init\((\S+)\(\)\),LTL\((\S+)\)\)$/) {
   print "PROP=\"label\"\nLABEL=\"$1\"\n" if($2 =~ /^G!label\((\S+)\)$/);
   print "PROP=\"unreach_call\"\n" if($2 =~ /^G!call\(__VERIFIER_error\(\)\)$/);
   print "PROP=\"memsafety\"\n" if($2 =~ /^Gvalid-(free|deref|memtrack)$/);
+  print "PROP=\"memcleanup\"\n" if($2 =~ /^Gvalid-memcleanup$/);
   print "PROP=\"overflow\"\n" if($2 =~ /^G!overflow$/);
   print "PROP=\"termination\"\n" if($2 =~ /^Fend$/);
 }'
@@ -91,7 +92,7 @@ case $PROP in
     export UBSAN_OPTIONS="halt_on_error=1"
     perl -p -i -e 's/(void __VERIFIER_error\(\) \{) assert\(0\); (\})/$1$2/' tester.c
     ;;
-  memsafety)
+  memsafety|memcleanup)
     SAN_OPTS="-fsanitize=address"
     if gcc -fsanitize=leak -x c -c /dev/null -o /dev/null > /dev/null 2>&1 ; then
       SAN_OPTS+=" -fsanitize=leak"
@@ -154,6 +155,21 @@ case $PROP in
     else
       cat log 1>&2
       echo "$BM: ERROR - failing memory safety violation not found" 1>&2
+      if [ $ec -eq 0 ] ; then
+        echo "TRUE"
+      else
+        echo "UNKNOWN"
+      fi
+      exit $ec
+    fi
+    ;;
+  memcleanup)
+    if grep -q "^SUMMARY: AddressSanitizer: .* leaked in" log ; then
+      echo "$BM: OK"
+      echo "FALSE(valid-memcleanup)"
+    else
+      cat log 1>&2
+      echo "$BM: ERROR - memory cleanup violation not found" 1>&2
       if [ $ec -eq 0 ] ; then
         echo "TRUE"
       else
