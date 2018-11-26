@@ -287,6 +287,7 @@ foreach my $f (keys %all_edits) {
   }
 
   if (defined($appends{$f})) {
+    print MAKEFILE "\techo '#include <math.h>' >> \$\@\n";
     print MAKEFILE "\techo '" . $appends{$f}{init_name} . "(){' >> \$\@\n";
     foreach my $a (@{ $appends{$f}{lines} }) {
       $a =~ s/'/'"'"'/g;
