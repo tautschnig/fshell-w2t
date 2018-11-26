@@ -157,12 +157,12 @@ foreach my $id (sort keys %test_suite) {
     } else {
       my $new_name = $sym->{symbol} . "_" . $sym->{file} . "_" . $sym->{line};
       $new_name =~ s/[\/\\:]/__/g;
-      $new_name =~ s/[\.-]/_/g;
+      $new_name =~ s/[\.\+-]/_/g;
       push @{ $inserts{ $sym->{file} } }, "extern unsigned __fshell2__tc_selector;";
       if ($sym->{is_global}) {
         if (!defined($appends{ $sym->{file} })) {
           my $init_name = $sym->{file};
-          $init_name =~ s/[\/\\\.\-]/_/g;
+          $init_name =~ s/[\/\\\.\+\-]/_/g;
           $appends{ $sym->{file} }{init_name} = "__${init_name}_init_globals";
           $appends{ $sym->{file} }{lines} = ();
         }
