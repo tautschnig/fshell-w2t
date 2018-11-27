@@ -64,7 +64,8 @@ def setupTypes(ast, entryFunc, inputs, nondets, entry):
         for d in fun.body.block_items:
           if isinstance(d, c_ast.Decl):
             info = {}
-            typestr = c_generator.CGenerator().visit(d.type)
+            typestr = c_generator.CGenerator().visit(d)
+            typestr = re.sub(r'\b%s\b' % d.name, '', typestr)
             while typedefs.get(typestr):
               typestr = typedefs.get(typestr)
             info['type'] = typestr
