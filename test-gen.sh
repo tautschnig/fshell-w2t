@@ -143,10 +143,16 @@ case $PROP in
     fi
     ;;
   memsafety)
-    if grep -q "^SUMMARY: AddressSanitizer: bad-free" log ; then
+    if egrep -q "^SUMMARY: AddressSanitizer: (bad|double)-free" log ; then
       echo "$BM: OK"
       echo "FALSE(valid-free)"
     elif egrep -q "^SUMMARY: AddressSanitizer: (SEGV|stack-overflow|(stack|heap|global)-buffer-overflow)" log ; then
+      echo "$BM: OK"
+      echo "FALSE(valid-deref)"
+    elif egrep -q "^SUMMARY: AddressSanitizer: heap-use-after-free" log ; then
+      echo "$BM: OK"
+      echo "FALSE(valid-deref)"
+    elif egrep -q "ERROR: AddressSanitizer: SEGV" log ; then
       echo "$BM: OK"
       echo "FALSE(valid-deref)"
     elif grep -q "^SUMMARY: AddressSanitizer: .* leaked in" log ; then
