@@ -9,6 +9,7 @@ my %inserts = ();
 my %func_appends = ();
 my %replaces = ();
 my %appends = ();
+my %global_appends = ();
 
 sub prepare_main () {
   my ($tc_id, $input_line) = @_;
@@ -201,15 +202,20 @@ foreach my $id (sort keys %test_suite) {
       }
       
       (defined($inserts{ $sym->{file} })) or $inserts{ $sym->{file} } = ();
+      (defined($global_appends{ $sym->{file} })) or $global_appends{ $sym->{file} } = ();
       push @{ $inserts{ $sym->{file} } }, "unsigned idx__$new_name = 0;";
       if ($sym->{type} =~ /(\[\d+\])/) {
         my $dim = $1;
         my $type = $sym->{type};
         $type =~ s/\Q$dim\E//;
         push @{ $inserts{ $sym->{file} } }, $type . " $new_name\[" . scalar(@vals) .
+          "][$max_size]$dim;";
+        push @{ $global_appends{ $sym->{file} } }, $type . " $new_name\[" . scalar(@vals) .
           "][$max_size]$dim = { " . join(",", @vals) . " };";
       } else {
         push @{ $inserts{ $sym->{file} } }, $sym->{type} . " $new_name\[" . scalar(@vals) .
+          "][$max_size];";
+        push @{ $global_appends{ $sym->{file} } }, $sym->{type} . " $new_name\[" . scalar(@vals) .
           "][$max_size] = { " . join(",", @vals) . " };";
       }
     }
@@ -245,6 +251,7 @@ my %all_edits = ();
 @all_edits{ keys %inserts } = ();
 @all_edits{ keys %func_appends } = ();
 @all_edits{ keys %appends } = ();
+@all_edits{ keys %global_appends } = ();
 
 foreach my $f (keys %all_edits) {
   print MAKEFILE "$f.mod.c: $f\n";
@@ -295,6 +302,15 @@ foreach my $f (keys %all_edits) {
       print MAKEFILE "\techo '  $a;' >> \$\@\n";
     }
     print MAKEFILE "\techo '}' >> \$\@\n";
+  }
+
+  if (defined($global_appends{$f})) {
+    print MAKEFILE "\techo '#include <math.h>' >> \$\@\n";
+    foreach my $a (@{ $global_appends{$f} }) {
+      $a =~ s/'/'"'"'/g;
+      $a =~ s/\\/\\\\/g;
+      print MAKEFILE "\techo '  $a;' >> \$\@\n";
+    }
   }
   
   print MAKEFILE "\n";
