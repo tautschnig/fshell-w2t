@@ -49,8 +49,7 @@ def validateConfig(graph, ns, witness, benchmark, bitwidth):
   return re.sub(r'^CHECK\(init\((\S+?)\(\)\),LTL\((\S+)\)\).*', '\g<1>', spec)
 
 
-def setupTypes(ast, entryFunc, inputs, nondets, entry):
-  typedefs = {}
+def setupTypes(ast, entryFunc, inputs, nondets, entry, typedefs):
   for fun in ast.ext:
     if isinstance(fun, c_ast.Decl) and isinstance(fun.type, c_ast.FuncDecl):
       if fun.name.startswith('__VERIFIER_nondet_'):
@@ -66,8 +65,8 @@ def setupTypes(ast, entryFunc, inputs, nondets, entry):
             info = {}
             typestr = c_generator.CGenerator().visit(d)
             typestr = re.sub(r'\b%s\b' % d.name, '', typestr)
-            while typedefs.get(typestr):
-              typestr = typedefs.get(typestr)
+            if typedefs.get(typestr):
+                typestr = typedefs[typestr]
             info['type'] = typestr
             info['line'] = d.coord.line
             if d.init is None:
@@ -76,7 +75,10 @@ def setupTypes(ast, entryFunc, inputs, nondets, entry):
         entry['type'] = c_generator.CGenerator().visit(fun.decl.type)
         entry['line'] = fun.coord.line
     elif isinstance(fun, c_ast.Typedef):
-      typedefs[fun.name] = c_generator.CGenerator().visit(fun.type.type)
+      typestr = c_generator.CGenerator().visit(fun.type.type)
+      while typedefs.get(typestr):
+        typestr = typedefs.get(typestr)
+      typedefs[fun.name] = typestr
 
 
 def setupWatch(ast, watch):
@@ -204,7 +206,8 @@ def processWitness(witness, benchmark, bitwidth):
   inputs = {}
   nondets = {}
   entry = {}
-  setupTypes(ast, entryFun, inputs, nondets, entry)
+  typedefs = {}
+  setupTypes(ast, entryFun, inputs, nondets, entry, typedefs)
   assert entry
   watch = {}
   setupWatch(ast, watch)
@@ -221,7 +224,9 @@ def processWitness(witness, benchmark, bitwidth):
       a = re.sub(r'==', '=', trace[n]['assumption'])
       a = re.sub(r'\\result', '__SV_COMP_result', a)
       # we may be missing typedefs used in type casts
-      a = re.sub(r'\([a-zA-Z0-9_]+\s*\*?\)', '', a)
+      if re.search(r'\(\s*[a-zA-Z_][a-zA-Z0-9_]*.*\)', a):
+          for t in typedefs:
+              a = a.replace(t, typedefs[t])
       wrapped = 'void foo() { ' + a + ';}'
       for a_ast in parser.parse(wrapped).ext[0].body.block_items:
         if isinstance(a_ast, c_ast.Assignment):
