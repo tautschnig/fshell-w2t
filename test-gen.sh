@@ -11,6 +11,7 @@ if(/^CHECK\(init\((\S+)\(\)\),LTL\((\S+)\)\)$/) {
   print "ENTRY=$1\n";
   print "PROP=\"label\"\nLABEL=\"$1\"\n" if($2 =~ /^G!label\((\S+)\)$/);
   print "PROP=\"unreach_call\"\n" if($2 =~ /^G!call\(__VERIFIER_error\(\)\)$/);
+  print "PROP=\"unreach_call\"\n" if($2 =~ /^G!call\(reach_error\(\)\)$/);
   print "PROP=\"memsafety\"\n" if($2 =~ /^Gvalid-(free|deref|memtrack)$/);
   print "PROP=\"memcleanup\"\n" if($2 =~ /^Gvalid-memcleanup$/);
   print "PROP=\"overflow\"\n" if($2 =~ /^G!overflow$/);
@@ -108,7 +109,7 @@ touch harness.c
 cp harness.c $SCRIPTDIR/
 case $PROP in
   unreach_call)
-    if ! grep -q "tester: .* __VERIFIER_error.*: Assertion \`0' failed." log ; then
+    if ! grep -q "tester: .*Assertion \`.*' failed." log ; then
       cat log 1>&2
       echo "$BM: ERROR - failing assertion not found" 1>&2
       if [ $ec -eq 0 ] ; then
