@@ -241,6 +241,7 @@ def processWitness(witness, benchmark, bitwidth):
               missing_nondets.remove(w)
           elif (f is not None and
                 isinstance(a_ast.lvalue, c_ast.ID) and
+                inputs.get(f) is not None and
                 inputs[f].get(a_ast.lvalue.name) is not None):
             values.append([f, a_ast.lvalue.name, v])
           # else:
