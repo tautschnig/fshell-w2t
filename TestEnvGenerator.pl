@@ -287,9 +287,9 @@ foreach my $f (keys %all_edits) {
           my @val = @{ $replaces{$f}{$l}{$s} };
           print MAKEFILE "\tmv \$\@ \$\@_\n";
           if ($^O eq "darwin") {
-            print MAKEFILE "\tsed '$l s/^/$val[0]/' \$\@_ > \$\@\n";
+            print MAKEFILE "\tsed '$l s/^\\([{[:space:]]*\\)/\\1$val[0]/' \$\@_ > \$\@\n";
           } else {
-            print MAKEFILE "\tsed '$l s/^/$val[0]/' \$\@_ > \$\@\n";
+            print MAKEFILE "\tsed '$l s/^\\([{[:space:]]*\\)/\\1$val[0]/' \$\@_ > \$\@\n";
           }
           print MAKEFILE "\trm \$\@_\n";
 
