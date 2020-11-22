@@ -171,6 +171,7 @@ def processWitness(witness, benchmark, bitwidth):
       skipAsm = False
       for line in b:
         # rewrite some GCC extensions
+        line = re.sub(r'__extension__\s*\(\{\s*if\s*\(0\)\s*;\s*else\s+(__assert_fail\s*\("0",\s*".*",\s*\d+,\s*__extension__\s+__PRETTY_FUNCTION__\s*\));\s*\}\)', r'\1', line)
         line = re.sub(r'__extension__', '', line)
         line = re.sub(r'__restrict', 'restrict', line)
         line = re.sub(r'__inline__', 'inline', line)
