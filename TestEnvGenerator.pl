@@ -68,7 +68,7 @@ sub process_input () {
 
   # is $sym an undefined function?
   # drop non-file info from $loc
-  if ($sym =~ /\(.*\)/) {
+  if ($sym =~ /\(.*\)/ && !($sym =~ /\(\*\)\(.*\)/)) {
     $is_func = 1;
     $key = "$sym\@$file";
   } else {
@@ -172,6 +172,8 @@ foreach my $id (sort keys %test_suite) {
       } elsif ($sym->{type} =~ /\[\d+\]/) {
         $replaces{ $sym->{file} }{ $sym->{line} }{ $sym->{symbol} . "\\[.*\\]" } =
           "*" . $sym->{symbol} . "=$new_name\[__fshell2__tc_selector][idx__$new_name++]";
+      } elsif ($sym->{type} =~ /\(.*\)/) {
+        # function pointers - skip them
       } else {
         $replaces{ $sym->{file} }{ $sym->{line} }{ $sym->{symbol} } =
           $sym->{symbol} .  "=$new_name\[__fshell2__tc_selector][idx__$new_name++]";
@@ -213,6 +215,8 @@ foreach my $id (sort keys %test_suite) {
             "][$max_size]$dim;";
           push @{ $global_appends{ $sym->{file} } }, $type . " $new_name\[" . scalar(@vals) .
             "][$max_size]$dim = { " . join(",", @vals) . " };";
+        } elsif ($sym->{type} =~ /\(.*\)/) {
+          # function pointers - skip them
         } else {
           push @{ $inserts{ $sym->{file} } }, $sym->{type} . " $new_name\[" . scalar(@vals) .
             "][$max_size];";
@@ -228,6 +232,8 @@ foreach my $id (sort keys %test_suite) {
           $replaces{ $sym->{file} }{ $sym->{line} }{ $sym->{symbol} . "\\[.*\\]" } =
             [$type . " $new_name\[" . scalar(@vals) .  "][$max_size]$dim = { " .
               join(",", @vals) . " };", $r];
+        } elsif ($sym->{type} =~ /\(.*\)/) {
+          # function pointers - skip them
         } else {
           my $r = $replaces{ $sym->{file} }{ $sym->{line} }{ $sym->{symbol} };
           $replaces{ $sym->{file} }{ $sym->{line} }{ $sym->{symbol} } =
