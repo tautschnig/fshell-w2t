@@ -153,10 +153,13 @@ case $PROP in
     if egrep -q "^SUMMARY: AddressSanitizer: (bad|double)-free" log ; then
       echo "$BM: OK"
       echo "FALSE(valid-free)"
-    elif egrep -q "^SUMMARY: AddressSanitizer: (SEGV|stack-overflow|(stack|heap|global)-buffer-overflow)" log ; then
+    elif egrep -q "^SUMMARY: AddressSanitizer: (SEGV|stack-overflow|(stack|heap|global|dynamic-stack)-buffer-overflow)" log ; then
       echo "$BM: OK"
       echo "FALSE(valid-deref)"
     elif egrep -q "^SUMMARY: AddressSanitizer: heap-use-after-free" log ; then
+      echo "$BM: OK"
+      echo "FALSE(valid-deref)"
+    elif egrep -q "^SUMMARY: AddressSanitizer: stack-use-after-scope" log ; then
       echo "$BM: OK"
       echo "FALSE(valid-deref)"
     elif egrep -q "ERROR: AddressSanitizer: SEGV" log ; then
