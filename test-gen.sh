@@ -72,6 +72,12 @@ if [ ! -d pycparser-master ] ; then
   unzip pycparser-master.zip
 fi
 
+if [ ! -d pycparserext-master ] ; then
+  wget https://codeload.github.com/inducer/pycparserext/zip/master \
+    -O pycparserext-master.zip
+  unzip pycparserext-master.zip
+fi
+
 SCRIPTDIR=$PWD
 DATA=`mktemp -d -t witness.XXXXXX`
 trap "rm -rf $DATA" EXIT
@@ -81,7 +87,7 @@ cp "$WITNESS_FILE" "$BM" $DATA
 WITNESS_FILE=`basename "$WITNESS_FILE"`
 BM=`basename "$BM"`
 cd $DATA
-PYTHONPATH=$SCRIPTDIR/pycparser-master \
+PYTHONPATH=$SCRIPTDIR/pycparserext-master:$SCRIPTDIR/pycparser-master \
   python $SCRIPTDIR/process_witness.py \
   $BIT_WIDTH -w "$WITNESS_FILE" -b "$BM" > data
 $SCRIPTDIR/TestEnvGenerator.pl < data

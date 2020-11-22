@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 from pycparser import c_ast, c_generator, c_parser, parse_file
+# from pycparserext import c_generator
 
 import argparse
 import hashlib
