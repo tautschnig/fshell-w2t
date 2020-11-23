@@ -108,6 +108,15 @@ case $PROP in
     ;;
 esac
 
+case `uname` in
+  Darwin)
+    assertion_failure_pattern="Assertion failed: (.*), function .*"
+    ;;
+  *)
+    assertion_failure_pattern="tester: .*Assertion \`.*' failed."
+    ;;
+esac
+
 ec=0
 make -f tester.mk BUILD_FLAGS="-g $BIT_WIDTH -std=gnu99 -fgnu89-inline $SAN_OPTS" > log 2>&1 || ec=$?
 # be safe and generate one
@@ -115,7 +124,7 @@ touch harness.c
 cp harness.c $SCRIPTDIR/
 case $PROP in
   unreach_call)
-    if ! grep -q "tester: .*Assertion \`.*' failed." log ; then
+    if ! grep -q "$assertion_failure_pattern" log; then
       cat log 1>&2
       echo "$BM: ERROR - failing assertion not found" 1>&2
       if [ $ec -eq 0 ] ; then
