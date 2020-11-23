@@ -109,7 +109,7 @@ case $PROP in
 esac
 
 ec=0
-make -f tester.mk BUILD_FLAGS="-g $BIT_WIDTH -std=c99 -fgnu89-inline $SAN_OPTS" > log 2>&1 || ec=$?
+make -f tester.mk BUILD_FLAGS="-g $BIT_WIDTH -std=gnu99 -fgnu89-inline $SAN_OPTS" > log 2>&1 || ec=$?
 # be safe and generate one
 touch harness.c
 cp harness.c $SCRIPTDIR/
