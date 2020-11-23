@@ -11,6 +11,7 @@ if(/^CHECK\(init\((\S+)\(\)\),LTL\((\S+)\)\)$/) {
   print "ENTRY=$1\n";
   print "PROP=\"label\"\nLABEL=\"$1\"\n" if($2 =~ /^G!label\((\S+)\)$/);
   print "PROP=\"unreach_call\"\n" if($2 =~ /^G!call\(__VERIFIER_error\(\)\)$/);
+  print "PROP=\"unreach_call\"\n" if($2 =~ /^G!call\(reach_error\(\)\)$/);
   print "PROP=\"memsafety\"\n" if($2 =~ /^Gvalid-(free|deref|memtrack)$/);
   print "PROP=\"memcleanup\"\n" if($2 =~ /^Gvalid-memcleanup$/);
   print "PROP=\"overflow\"\n" if($2 =~ /^G!overflow$/);
@@ -71,6 +72,12 @@ if [ ! -d pycparser-master ] ; then
   unzip pycparser-master.zip
 fi
 
+if [ ! -d pycparserext-master ] ; then
+  wget https://codeload.github.com/tautschnig/pycparserext/zip/master \
+    -O pycparserext-master.zip
+  unzip pycparserext-master.zip
+fi
+
 SCRIPTDIR=$PWD
 DATA=`mktemp -d -t witness.XXXXXX`
 trap "rm -rf $DATA" EXIT
@@ -80,7 +87,7 @@ cp "$WITNESS_FILE" "$BM" $DATA
 WITNESS_FILE=`basename "$WITNESS_FILE"`
 BM=`basename "$BM"`
 cd $DATA
-PYTHONPATH=$SCRIPTDIR/pycparser-master \
+PYTHONPATH=$SCRIPTDIR/pycparserext-master:$SCRIPTDIR/pycparser-master \
   python $SCRIPTDIR/process_witness.py \
   $BIT_WIDTH -w "$WITNESS_FILE" -b "$BM" > data
 $SCRIPTDIR/TestEnvGenerator.pl < data
@@ -103,15 +110,15 @@ esac
 
 case `uname` in
   Darwin)
-    assertion_failure_pattern="Assertion failed: (0), function __VERIFIER_error"
+    assertion_failure_pattern="Assertion failed: (.*), function .*"
     ;;
   *)
-    assertion_failure_pattern="tester: .* __VERIFIER_error.*: Assertion \`0' failed."
+    assertion_failure_pattern="tester: .*Assertion \`.*' failed."
     ;;
 esac
 
 ec=0
-make -f tester.mk BUILD_FLAGS="-g $BIT_WIDTH -std=c99 -fgnu89-inline $SAN_OPTS" > log 2>&1 || ec=$?
+make -f tester.mk BUILD_FLAGS="-g $BIT_WIDTH -std=gnu99 -fgnu89-inline $SAN_OPTS" > log 2>&1 || ec=$?
 # be safe and generate one
 touch harness.c
 cp harness.c $SCRIPTDIR/
@@ -155,10 +162,13 @@ case $PROP in
     if egrep -q "^SUMMARY: AddressSanitizer: (bad|double)-free" log ; then
       echo "$BM: OK"
       echo "FALSE(valid-free)"
-    elif egrep -q "^SUMMARY: AddressSanitizer: (SEGV|stack-overflow|(stack|heap|global)-buffer-overflow)" log ; then
+    elif egrep -q "^SUMMARY: AddressSanitizer: (SEGV|stack-overflow|(stack|heap|global|dynamic-stack)-buffer-overflow)" log ; then
       echo "$BM: OK"
       echo "FALSE(valid-deref)"
     elif egrep -q "^SUMMARY: AddressSanitizer: heap-use-after-free" log ; then
+      echo "$BM: OK"
+      echo "FALSE(valid-deref)"
+    elif egrep -q "^SUMMARY: AddressSanitizer: stack-use-after-scope" log ; then
       echo "$BM: OK"
       echo "FALSE(valid-deref)"
     elif egrep -q "ERROR: AddressSanitizer: SEGV" log ; then
@@ -167,6 +177,9 @@ case $PROP in
     elif grep -q "^SUMMARY: AddressSanitizer: .* leaked in" log ; then
       echo "$BM: OK"
       echo "FALSE(valid-memtrack)"
+    elif grep -q "Segmentation fault (core dumped)$" log ; then
+      echo "$BM: OK"
+      echo "FALSE(valid-deref)"
     else
       cat log 1>&2
       echo "$BM: ERROR - failing memory safety violation not found" 1>&2

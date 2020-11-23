@@ -68,7 +68,7 @@ sub process_input () {
 
   # is $sym an undefined function?
   # drop non-file info from $loc
-  if ($sym =~ /\(.*\)/) {
+  if ($sym =~ /\(.*\)/ && !($sym =~ /\(\*\)\(.*\)/)) {
     $is_func = 1;
     $key = "$sym\@$file";
   } else {
@@ -172,6 +172,8 @@ foreach my $id (sort keys %test_suite) {
       } elsif ($sym->{type} =~ /\[\d+\]/) {
         $replaces{ $sym->{file} }{ $sym->{line} }{ $sym->{symbol} . "\\[.*\\]" } =
           "*" . $sym->{symbol} . "=$new_name\[__fshell2__tc_selector][idx__$new_name++]";
+      } elsif ($sym->{type} =~ /\(.*\)/) {
+        # function pointers - skip them
       } else {
         $replaces{ $sym->{file} }{ $sym->{line} }{ $sym->{symbol} } =
           $sym->{symbol} .  "=$new_name\[__fshell2__tc_selector][idx__$new_name++]";
@@ -202,21 +204,42 @@ foreach my $id (sort keys %test_suite) {
       }
       
       (defined($inserts{ $sym->{file} })) or $inserts{ $sym->{file} } = ();
-      (defined($global_appends{ $sym->{file} })) or $global_appends{ $sym->{file} } = ();
       push @{ $inserts{ $sym->{file} } }, "unsigned idx__$new_name = 0;";
-      if ($sym->{type} =~ /(\[\d+\])/) {
-        my $dim = $1;
-        my $type = $sym->{type};
-        $type =~ s/\Q$dim\E//;
-        push @{ $inserts{ $sym->{file} } }, $type . " $new_name\[" . scalar(@vals) .
-          "][$max_size]$dim;";
-        push @{ $global_appends{ $sym->{file} } }, $type . " $new_name\[" . scalar(@vals) .
-          "][$max_size]$dim = { " . join(",", @vals) . " };";
+      if ($sym->{is_global}) {
+        (defined($global_appends{ $sym->{file} })) or $global_appends{ $sym->{file} } = ();
+        if ($sym->{type} =~ /(\[\d+\])/) {
+          my $dim = $1;
+          my $type = $sym->{type};
+          $type =~ s/\Q$dim\E//;
+          push @{ $inserts{ $sym->{file} } }, $type . " $new_name\[" . scalar(@vals) .
+            "][$max_size]$dim;";
+          push @{ $global_appends{ $sym->{file} } }, $type . " $new_name\[" . scalar(@vals) .
+            "][$max_size]$dim = { " . join(",", @vals) . " };";
+        } elsif ($sym->{type} =~ /\(.*\)/) {
+          # function pointers - skip them
+        } else {
+          push @{ $inserts{ $sym->{file} } }, $sym->{type} . " $new_name\[" . scalar(@vals) .
+            "][$max_size];";
+          push @{ $global_appends{ $sym->{file} } }, $sym->{type} . " $new_name\[" . scalar(@vals) .
+            "][$max_size] = { " . join(",", @vals) . " };";
+        }
       } else {
-        push @{ $inserts{ $sym->{file} } }, $sym->{type} . " $new_name\[" . scalar(@vals) .
-          "][$max_size];";
-        push @{ $global_appends{ $sym->{file} } }, $sym->{type} . " $new_name\[" . scalar(@vals) .
-          "][$max_size] = { " . join(",", @vals) . " };";
+        if ($sym->{type} =~ /(\[\d+\])/) {
+          my $dim = $1;
+          my $type = $sym->{type};
+          $type =~ s/\Q$dim\E//;
+          my $r = $replaces{ $sym->{file} }{ $sym->{line} }{ $sym->{symbol} . "\\[.*\\]" };
+          $replaces{ $sym->{file} }{ $sym->{line} }{ $sym->{symbol} . "\\[.*\\]" } =
+            [$type . " $new_name\[" . scalar(@vals) .  "][$max_size]$dim = { " .
+              join(",", @vals) . " };", $r];
+        } elsif ($sym->{type} =~ /\(.*\)/) {
+          # function pointers - skip them
+        } else {
+          my $r = $replaces{ $sym->{file} }{ $sym->{line} }{ $sym->{symbol} };
+          $replaces{ $sym->{file} }{ $sym->{line} }{ $sym->{symbol} } =
+            [$sym->{type} . " $new_name\[" . scalar(@vals) .  "][$max_size] = { " .
+              join(",", @vals) . " };", $r];
+        }
       }
     }
   }
@@ -260,6 +283,18 @@ foreach my $f (keys %all_edits) {
   if (defined($replaces{$f})) {
     foreach my $l (keys %{ $replaces{$f} }) {
       foreach my $s (keys %{ $replaces{$f}{$l} }) {
+        if (ref($replaces{$f}{$l}{$s}) eq 'ARRAY') {
+          my @val = @{ $replaces{$f}{$l}{$s} };
+          print MAKEFILE "\tmv \$\@ \$\@_\n";
+          if ($^O eq "darwin") {
+            print MAKEFILE "\tsed '$l s/^\\([{[:space:]]*\\)/\\1$val[0]/' \$\@_ > \$\@\n";
+          } else {
+            print MAKEFILE "\tsed '$l s/^\\([{[:space:]]*\\)/\\1$val[0]/' \$\@_ > \$\@\n";
+          }
+          print MAKEFILE "\trm \$\@_\n";
+
+          $replaces{$f}{$l}{$s} = $val[1];
+        }
         print MAKEFILE "\tmv \$\@ \$\@_\n";
         if ($^O eq "darwin") {
           print MAKEFILE "\tsed '$l s/[[:<:]]$s\[[:>:]\]/ $replaces{$f}{$l}{$s}/' \$\@_ > \$\@\n";
@@ -273,7 +308,7 @@ foreach my $f (keys %all_edits) {
   
   if (defined($inserts{$f})) {
     print MAKEFILE "\tmv \$\@ \$\@_\n";
-    print MAKEFILE "\techo '#include <math.h>' >> \$\@\n";
+    print MAKEFILE "\tegrep -w -q '(__fsid_t)' \$\@_ || echo '#include <math.h>' >> \$\@\n";
     foreach my $i (@{ $inserts{$f} }) {
       $i =~ s/'/'"'"'/g;
       $i =~ s/\\/\\\\/g;
@@ -294,7 +329,7 @@ foreach my $f (keys %all_edits) {
   }
 
   if (defined($appends{$f})) {
-    print MAKEFILE "\techo '#include <math.h>' >> \$\@\n";
+    print MAKEFILE "\tegrep -w -q '(__fsid_t)' \$\@ || echo '#include <math.h>' >> \$\@\n";
     print MAKEFILE "\techo '" . $appends{$f}{init_name} . "(){' >> \$\@\n";
     foreach my $a (@{ $appends{$f}{lines} }) {
       $a =~ s/'/'"'"'/g;
@@ -305,7 +340,7 @@ foreach my $f (keys %all_edits) {
   }
 
   if (defined($global_appends{$f})) {
-    print MAKEFILE "\techo '#include <math.h>' >> \$\@\n";
+    print MAKEFILE "\tegrep -w -q '(__fsid_t)' \$\@ || echo '#include <math.h>' >> \$\@\n";
     foreach my $a (@{ $global_appends{$f} }) {
       $a =~ s/'/'"'"'/g;
       $a =~ s/\\/\\\\/g;
