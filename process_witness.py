@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
 from __future__ import print_function
-from pycparser import c_ast, c_generator, c_parser, parse_file
-# from pycparserext import c_generator
+from pycparser import c_ast, parse_file
+from pycparserext import ext_c_generator, ext_c_parser
 
 import argparse
 import hashlib
@@ -55,7 +55,14 @@ def setupTypes(ast, entryFunc, inputs, nondets, entry, typedefs):
     if isinstance(fun, c_ast.Decl) and isinstance(fun.type, c_ast.FuncDecl):
       if fun.name.startswith('__VERIFIER_nondet_'):
         info = {}
-        info['type'] = c_generator.CGenerator().visit(fun.type)
+        info['type'] = ext_c_generator.GnuCGenerator().visit(fun.type)
+        info['line'] = fun.coord.line
+        nondets[fun.name] = info
+    if isinstance(fun, c_ast.Decl) and isinstance(fun.type, ext_c_parser.FuncDeclExt):
+      if fun.name.startswith('__VERIFIER_nondet_'):
+        info = {}
+        info['type'] = ext_c_generator.GnuCGenerator().visit(fun)
+        info['type'] = re.sub(r'^extern ', '', info['type'])
         info['line'] = fun.coord.line
         nondets[fun.name] = info
     elif isinstance(fun, c_ast.FuncDef):
@@ -64,7 +71,7 @@ def setupTypes(ast, entryFunc, inputs, nondets, entry, typedefs):
         for d in fun.body.block_items:
           if isinstance(d, c_ast.Decl):
             info = {}
-            typestr = c_generator.CGenerator().visit(d)
+            typestr = ext_c_generator.GnuCGenerator().visit(d)
             typestr = re.sub(r'\b%s\b' % d.name, '', typestr)
             if typedefs.get(typestr):
                 typestr = typedefs[typestr]
@@ -73,13 +80,23 @@ def setupTypes(ast, entryFunc, inputs, nondets, entry, typedefs):
             if d.init is None:
               inputs[fun.decl.name][d.name] = info
       if fun.decl.name == entryFunc:
-        entry['type'] = c_generator.CGenerator().visit(fun.decl.type)
+        entry['type'] = ext_c_generator.GnuCGenerator().visit(fun.decl.type)
         entry['line'] = fun.coord.line
     elif isinstance(fun, c_ast.Typedef):
-      typestr = c_generator.CGenerator().visit(fun.type.type)
+      name = fun.name
+      if isinstance(fun.type, ext_c_parser.FuncDeclExt):
+        typestr = ext_c_generator.GnuCGenerator().visit(fun.type.type) + ('()' +
+          '(' + ext_c_generator.GnuCGenerator().visit(fun.type.args) + ')')
+        name = fun.name + ' (*)'
+      elif isinstance(fun.type, c_ast.PtrDecl) and isinstance(fun.type.type,
+              ext_c_parser.FuncDeclExt):
+        typestr = ext_c_generator.GnuCGenerator().visit(fun.type.type.type) + ('(*)' +
+          '(' + ext_c_generator.GnuCGenerator().visit(fun.type.type.args) + ')')
+      else:
+        typestr = ext_c_generator.GnuCGenerator().visit(fun.type)
       while typedefs.get(typestr):
         typestr = typedefs.get(typestr)
-      typedefs[fun.name] = typestr
+      typedefs[name] = typestr
 
 
 def setupWatch(ast, watch):
@@ -172,14 +189,20 @@ def processWitness(witness, benchmark, bitwidth):
       skipAsm = False
       for line in b:
         # rewrite some GCC extensions
+        """
         line = re.sub(r'__extension__\s*\(\{\s*if\s*\(0\)\s*;\s*else\s+(__assert_fail\s*\("0",\s*".*",\s*\d+,\s*__extension__\s+__PRETTY_FUNCTION__\s*\));\s*\}\)', r'\1', line)
+        """
         line = re.sub(r'__extension__', '', line)
+        """
         line = re.sub(r'__restrict', 'restrict', line)
         line = re.sub(r'__inline__', 'inline', line)
         line = re.sub(r'__inline', 'inline', line)
         line = re.sub(r'__const', 'const', line)
+        """
         line = re.sub(r'__signed__', 'signed', line)
+        """
         line = re.sub(r'__builtin_va_list', 'int', line)
+        """
         # a hack for some C-standards violating code in LDV benchmarks
         if needStructBody and re.match(r'^\s*}\s*;\s*$', line):
           line = 'int __dummy; ' + line
@@ -201,7 +224,7 @@ def processWitness(witness, benchmark, bitwidth):
         # remove asm renaming
         line = re.sub(r'__asm__\s*\(""\s+"[a-zA-Z0-9_]+"\)', '', line)
         benchmarkString += line
-  parser = c_parser.CParser()
+  parser = ext_c_parser.GnuCParser()
   ast = parser.parse(benchmarkString, filename=benchmark)
   # ast.show(showcoord=True, buf=sys.stderr)
 
@@ -226,14 +249,29 @@ def processWitness(witness, benchmark, bitwidth):
       a = re.sub(r'==', '=', trace[n]['assumption'])
       a = re.sub(r'\\result', '__SV_COMP_result', a)
       # we may be missing typedefs used in type casts
+      a_copy = a
       if re.search(r'\(\s*[a-zA-Z_][a-zA-Z0-9_]*.*\)', a):
+          # do two rounds - strictly speaking, we'd need a fixed point here
           for t in typedefs:
-              a = a.replace(t, typedefs[t])
+              if t.endswith(' (*)'):
+                a = re.sub(r'%s' % re.escape(t), typedefs[t], a)
+              else:
+                a = re.sub(r'\b%s\b' % re.escape(t), typedefs[t], a)
+          for t in typedefs:
+              if t.endswith(' (*)'):
+                a = re.sub(r'%s' % re.escape(t), typedefs[t], a)
+              else:
+                a = re.sub(r'\b%s\b' % re.escape(t), typedefs[t], a)
       wrapped = 'void foo() { ' + a + ';}'
-      for a_ast in parser.parse(wrapped).ext[0].body.block_items:
+      try:
+        block_items = parser.parse(wrapped).ext[0].body.block_items
+      except:
+        eprint('Failed to parse ' + wrapped + '(expanded from ' + a_copy + ')')
+        raise
+      for a_ast in block_items:
         if isinstance(a_ast, c_ast.Assignment):
           f = trace[n].get('assumption.scope')
-          v = c_generator.CGenerator().visit(a_ast.rvalue)
+          v = ext_c_generator.GnuCGenerator().visit(a_ast.rvalue)
           if (trace[n].get('startline') is not None and
               watch.get(int(trace[n]['startline'])) is not None):
             w = watch[int(trace[n]['startline'])]
