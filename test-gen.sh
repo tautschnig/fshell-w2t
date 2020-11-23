@@ -168,6 +168,9 @@ case $PROP in
     elif grep -q "^SUMMARY: AddressSanitizer: .* leaked in" log ; then
       echo "$BM: OK"
       echo "FALSE(valid-memtrack)"
+    elif grep -q "Segmentation fault (core dumped)$" log ; then
+      echo "$BM: OK"
+      echo "FALSE(valid-deref)"
     else
       cat log 1>&2
       echo "$BM: ERROR - failing memory safety violation not found" 1>&2
