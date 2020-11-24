@@ -120,7 +120,7 @@ case `uname` in
 esac
 
 ec=0
-make -f tester.mk BUILD_FLAGS="-g $BIT_WIDTH -std=gnu99 -fgnu89-inline $SAN_OPTS" > log 2>&1 || ec=$?
+make -f tester.mk BUILD_FLAGS="-g $BIT_WIDTH -std=gnu99 -fgnu89-inline -lm $SAN_OPTS" > log 2>&1 || ec=$?
 [ $KEEP_HARNESS -ne 1 ] || cp harness.c $SCRIPTDIR/
 case $PROP in
   unreach_call)
