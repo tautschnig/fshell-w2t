@@ -310,7 +310,7 @@ foreach my $f (keys %all_edits) {
   
   if (defined($inserts{$f})) {
     print MAKEFILE "\tmv \$\@ \$\@_\n";
-    print MAKEFILE "\tegrep -w -q '(__fsid_t)' \$\@_ || echo '#include <math.h>' >> \$\@\n";
+    print MAKEFILE "\tegrep -w -q '(__fsid_t|INFINITY|fabs)' \$\@_ || echo '#include <math.h>' >> \$\@\n";
     foreach my $i (@{ $inserts{$f} }) {
       $i =~ s/'/'"'"'/g;
       $i =~ s/\\/\\\\/g;
@@ -331,7 +331,7 @@ foreach my $f (keys %all_edits) {
   }
 
   if (defined($appends{$f})) {
-    print MAKEFILE "\tegrep -w -q '(__fsid_t)' \$\@ || echo '#include <math.h>' >> \$\@\n";
+    print MAKEFILE "\tegrep -w -q '(__fsid_t|INFINITY|fabs)' \$\@ || echo '#include <math.h>' >> \$\@\n";
     print MAKEFILE "\techo '" . $appends{$f}{init_name} . "(){' >> \$\@\n";
     foreach my $a (@{ $appends{$f}{lines} }) {
       $a =~ s/'/'"'"'/g;
@@ -342,7 +342,7 @@ foreach my $f (keys %all_edits) {
   }
 
   if (defined($global_appends{$f})) {
-    print MAKEFILE "\tegrep -w -q '(__fsid_t)' \$\@ || echo '#include <math.h>' >> \$\@\n";
+    print MAKEFILE "\tegrep -w -q '(__fsid_t|INFINITY|fabs)' \$\@ || echo '#include <math.h>' >> \$\@\n";
     foreach my $a (@{ $global_appends{$f} }) {
       $a =~ s/'/'"'"'/g;
       $a =~ s/\\/\\\\/g;
