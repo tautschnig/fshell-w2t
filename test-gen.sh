@@ -23,6 +23,7 @@ BIT_WIDTH="-m64"
 BM=""
 PROP_FILE=""
 WITNESS_FILE=""
+KEEP_HARNESS=0
 
 while [ -n "$1" ] ; do
   case "$1" in
@@ -30,6 +31,7 @@ while [ -n "$1" ] ; do
     --propertyfile) PROP_FILE="$2" ; shift 2 ;;
     --graphml-witness) WITNESS_FILE="$2" ; shift 2 ;;
     --version) echo "0.1" ; exit 0 ;;
+    --keep-harness) KEEP_HARNESS=1 ; shift 1 ;;
     *) BM="$1" ; shift 1 ;;
   esac
 done
@@ -119,9 +121,7 @@ esac
 
 ec=0
 make -f tester.mk BUILD_FLAGS="-g $BIT_WIDTH -std=gnu99 -fgnu89-inline $SAN_OPTS" > log 2>&1 || ec=$?
-# be safe and generate one
-touch harness.c
-cp harness.c $SCRIPTDIR/
+[ $KEEP_HARNESS -ne 1 ] || cp harness.c $SCRIPTDIR/
 case $PROP in
   unreach_call)
     if ! grep -q "$assertion_failure_pattern" log; then
