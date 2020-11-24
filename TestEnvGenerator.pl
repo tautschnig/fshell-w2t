@@ -197,6 +197,7 @@ foreach my $id (sort keys %test_suite) {
         }
         my $sym2 = \%{ $test_suite{$id2}{$key} };
         my $val = "{" . join(",", @{ $sym2->{vals} });
+        $val =~ s/&/\\&/g;
         for (my $i = scalar(@{ $sym2->{vals} }); $i < $max_size; $i++) { $val .=",0"; }
         $val .= "}";
         push @vals, $val;
