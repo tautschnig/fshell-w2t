@@ -94,6 +94,8 @@ def setupTypes(ast, entryFunc, inputs, nondets, entry, typedefs):
           '(' + ext_c_generator.GnuCGenerator().visit(fun.type.type.args) + ')')
       else:
         typestr = ext_c_generator.GnuCGenerator().visit(fun.type)
+        typestr = re.sub(r'^(struct|union)\s+[a-zA-Z_0-9]+\s*\{', r'\1 {',
+                            typestr)
       while typedefs.get(typestr):
         typestr = typedefs.get(typestr)
       typedefs[name] = typestr
@@ -272,6 +274,7 @@ def processWitness(witness, benchmark, bitwidth):
         if isinstance(a_ast, c_ast.Assignment):
           f = trace[n].get('assumption.scope')
           v = ext_c_generator.GnuCGenerator().visit(a_ast.rvalue)
+          v = re.sub(r'\n', ' ', v)
           if (trace[n].get('startline') is not None and
               watch.get(int(trace[n]['startline'])) is not None):
             w = watch[int(trace[n]['startline'])]
