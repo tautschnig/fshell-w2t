@@ -195,18 +195,18 @@ def processWitness(witness, benchmark, bitwidth):
         """
         line = re.sub(r'__extension__\s*\(\{\s*if\s*\(0\)\s*;\s*else\s+(__assert_fail\s*\("0",\s*".*",\s*\d+,\s*__extension__\s+__PRETTY_FUNCTION__\s*\));\s*\}\)', r'\1', line)
         """
-        line = re.sub(r'__extension__', '', line)
+        line = re.sub(r'\b__extension__\b', '', line)
         """
-        line = re.sub(r'__restrict', 'restrict', line)
-        line = re.sub(r'__inline__', 'inline', line)
-        line = re.sub(r'__inline', 'inline', line)
-        line = re.sub(r'__const', 'const', line)
+        line = re.sub(r'\b__restrict\b', 'restrict', line)
+        line = re.sub(r'\b__inline__\b', 'inline', line)
+        line = re.sub(r'\b__inline\b', 'inline', line)
+        line = re.sub(r'\b__const\b', 'const', line)
         """
-        line = re.sub(r'__signed__', 'signed', line)
+        line = re.sub(r'\b__signed__\b', 'signed', line)
         """
-        line = re.sub(r'__builtin_va_list', 'int', line)
+        line = re.sub(r'\b__builtin_va_list\b', 'int', line)
         """
-        line = re.sub(r'__thread', '', line)
+        line = re.sub(r'\b__thread\b', '', line)
         # a hack for some C-standards violating code in LDV benchmarks
         if needStructBody and re.match(r'^\s*}\s*;\s*$', line):
           line = 'int __dummy; ' + line
