@@ -75,7 +75,7 @@ if [ ! -d pycparser-master ] ; then
 fi
 
 if [ ! -d pycparserext-master ] ; then
-  wget https://codeload.github.com/tautschnig/pycparserext/zip/master \
+  wget https://codeload.github.com/inducer/pycparserext/zip/master \
     -O pycparserext-master.zip
   unzip pycparserext-master.zip
 fi
