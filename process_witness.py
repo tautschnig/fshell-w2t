@@ -189,6 +189,7 @@ def processWitness(witness, benchmark, bitwidth):
     with open(fp.name, 'r') as b:
       needStructBody = False
       skipAsm = False
+      inVaArg = 0
       for line in b:
         # rewrite some GCC extensions
         """
@@ -205,6 +206,7 @@ def processWitness(witness, benchmark, bitwidth):
         """
         line = re.sub(r'__builtin_va_list', 'int', line)
         """
+        line = re.sub(r'__thread', '', line)
         # a hack for some C-standards violating code in LDV benchmarks
         if needStructBody and re.match(r'^\s*}\s*;\s*$', line):
           line = 'int __dummy; ' + line
@@ -225,6 +227,32 @@ def processWitness(witness, benchmark, bitwidth):
           line = '\n'
         # remove asm renaming
         line = re.sub(r'__asm__\s*\(""\s+"[a-zA-Z0-9_]+"\)', '', line)
+        # pycparser cannot handle the type spec in va_arg
+        if re.search(r'__builtin_va_arg\([^,]+,[^\)]+\)', line):
+            line = re.sub(r'(__builtin_va_arg\([^,]+),[^\)]+\)', r'\1)', line)
+        elif re.search(r'__builtin_va_arg\(\s*$', line):
+            inVaArg = 1
+        elif inVaArg == 1:
+            inVaArg = 2
+        elif inVaArg == 2:
+            if not re.match(r'^\s*,\s*$', line):
+                inVaArg = 0
+            else:
+                inVaArg = 3
+                line = '\n'
+        elif inVaArg == 3:
+            if re.search(r';\*$', line):
+                inVaArg = 0
+                line = ',' + line
+            else:
+                inVaArg = 4
+                line = '\n'
+        elif inVaArg == 4:
+            assert re.match(r'^\s*\)\s*$', line)
+            inVaArg = 5
+        elif inVaArg == 5:
+            assert re.match(r'^\s*;\s*$', line)
+            inVaArg = 0
         benchmarkString += line
   parser = ext_c_parser.GnuCParser()
   ast = parser.parse(benchmarkString, filename=benchmark)
@@ -254,16 +282,22 @@ def processWitness(witness, benchmark, bitwidth):
       a_copy = a
       if re.search(r'\(\s*[a-zA-Z_][a-zA-Z0-9_]*.*\)', a):
           # do two rounds - strictly speaking, we'd need a fixed point here
+          do_not_repeat = False
           for t in typedefs:
+              a_before = a
               if t.endswith(' (*)'):
                 a = re.sub(r'%s' % re.escape(t), typedefs[t], a)
               else:
                 a = re.sub(r'\b%s\b' % re.escape(t), typedefs[t], a)
-          for t in typedefs:
-              if t.endswith(' (*)'):
-                a = re.sub(r'%s' % re.escape(t), typedefs[t], a)
-              else:
-                a = re.sub(r'\b%s\b' % re.escape(t), typedefs[t], a)
+              if 'struct struct' in a:
+                  a = a_before
+                  do_not_repeat = True
+          if not do_not_repeat:
+              for t in typedefs:
+                  if t.endswith(' (*)'):
+                    a = re.sub(r'%s' % re.escape(t), typedefs[t], a)
+                  else:
+                    a = re.sub(r'\b%s\b' % re.escape(t), typedefs[t], a)
       wrapped = 'void foo() { ' + a + ';}'
       try:
         block_items = parser.parse(wrapped).ext[0].body.block_items
