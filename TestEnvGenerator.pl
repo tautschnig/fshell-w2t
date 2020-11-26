@@ -288,6 +288,7 @@ foreach my $f (keys %all_edits) {
           $val[0] =~ s/'/'"'"'/g;
           $val[0] =~ s/\\/\\\\/g;
           $val[0] =~ s/&/\\&/g;
+          $val[0] =~ s/\//\\\//g;
           print MAKEFILE "\tmv \$\@ \$\@_\n";
           if ($^O eq "darwin") {
             print MAKEFILE "\tsed '$l s/^\\([{[:space:]]*\\)/\\1$val[0]/' \$\@_ > \$\@\n";
@@ -302,6 +303,7 @@ foreach my $f (keys %all_edits) {
         $replaces{$f}{$l}{$s} =~ s/'/'"'"'/g;
         $replaces{$f}{$l}{$s} =~ s/\\/\\\\/g;
         $replaces{$f}{$l}{$s} =~ s/&/\\&/g;
+        $replaces{$f}{$l}{$s} =~ s/\//\\\//g;
         if ($^O eq "darwin") {
           print MAKEFILE "\tsed '$l s/[[:<:]]$s\[[:>:]\]/ $replaces{$f}{$l}{$s}/' \$\@_ > \$\@\n";
         } else {
