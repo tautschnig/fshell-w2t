@@ -190,6 +190,7 @@ def processWitness(witness, benchmark, bitwidth):
       needStructBody = False
       skipAsm = False
       inVaArg = 0
+      inOffsetOf = 0
       for line in b:
         # rewrite some GCC extensions
         """
@@ -228,9 +229,9 @@ def processWitness(witness, benchmark, bitwidth):
         # remove asm renaming
         line = re.sub(r'__asm__\s*\(""\s+"[a-zA-Z0-9_]+"\)', '', line)
         # pycparser cannot handle the type spec in va_arg
-        if re.search(r'__builtin_va_arg\([^,]+,[^\)]+\)', line):
+        if re.search(r'__builtin_va_arg\s*\([^,]+,[^\)]+\)', line):
             line = re.sub(r'(__builtin_va_arg\([^,]+),[^\)]+\)', r'\1)', line)
-        elif re.search(r'__builtin_va_arg\(\s*$', line):
+        elif re.search(r'__builtin_va_arg\s*\(\s*$', line):
             inVaArg = 1
         elif inVaArg == 1:
             inVaArg = 2
@@ -253,6 +254,26 @@ def processWitness(witness, benchmark, bitwidth):
         elif inVaArg == 5:
             assert re.match(r'^\s*;\s*$', line)
             inVaArg = 0
+        # pycparser cannot handle the type spec in __builtin_offsetof
+        if re.search(r'__builtin_offsetof\s*\([^,]+,[^\)]+\)', line):
+            line = re.sub(r'__builtin_offsetof\s*\([^,]+,[^\)]+\)', '0', line)
+        elif re.search(r'__builtin_offsetof\s*\(\s*$', line):
+            line = re.sub(r'__builtin_offsetof\s*\(\s*$', '0\n', line)
+            inOffsetOf = 1
+        elif inOffsetOf == 1:
+            inOffsetOf = 2
+            line = '\n'
+        elif inOffsetOf == 2:
+            assert re.match(r'^\s*,\s*$', line)
+            inOffsetOf = 3
+            line = '\n'
+        elif inOffsetOf == 3:
+            inOffsetOf = 4
+            line = '\n'
+        elif inOffsetOf == 4:
+            assert re.match(r'^\s*\)\s*$', line)
+            inOffsetOf = 0
+            line = '\n'
         benchmarkString += line
   parser = ext_c_parser.GnuCParser()
   ast = parser.parse(benchmarkString, filename=benchmark)
