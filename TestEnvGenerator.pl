@@ -197,7 +197,6 @@ foreach my $id (sort keys %test_suite) {
         }
         my $sym2 = \%{ $test_suite{$id2}{$key} };
         my $val = "{" . join(",", @{ $sym2->{vals} });
-        $val =~ s/&/\\&/g;
         for (my $i = scalar(@{ $sym2->{vals} }); $i < $max_size; $i++) { $val .=",0"; }
         $val .= "}";
         push @vals, $val;
@@ -288,6 +287,7 @@ foreach my $f (keys %all_edits) {
           my @val = @{ $replaces{$f}{$l}{$s} };
           $val[0] =~ s/'/'"'"'/g;
           $val[0] =~ s/\\/\\\\/g;
+          $val[0] =~ s/&/\\&/g;
           print MAKEFILE "\tmv \$\@ \$\@_\n";
           if ($^O eq "darwin") {
             print MAKEFILE "\tsed '$l s/^\\([{[:space:]]*\\)/\\1$val[0]/' \$\@_ > \$\@\n";
@@ -301,6 +301,7 @@ foreach my $f (keys %all_edits) {
         print MAKEFILE "\tmv \$\@ \$\@_\n";
         $replaces{$f}{$l}{$s} =~ s/'/'"'"'/g;
         $replaces{$f}{$l}{$s} =~ s/\\/\\\\/g;
+        $replaces{$f}{$l}{$s} =~ s/&/\\&/g;
         if ($^O eq "darwin") {
           print MAKEFILE "\tsed '$l s/[[:<:]]$s\[[:>:]\]/ $replaces{$f}{$l}{$s}/' \$\@_ > \$\@\n";
         } else {
