@@ -267,7 +267,7 @@ print MAKEFILE join(".mod.c ", keys %replaces) .
   (scalar(keys %replaces)?".mod.c ":" ") . join(".mod.c ", keys %func_appends) .
   (scalar(keys %func_appends)?".mod.c ":" ") . join(".mod.c ", keys %inserts) .
   (scalar(keys %inserts)?".mod.c\n":"\n");
-print MAKEFILE "\t\$(CC) -o \$@ \$(BUILD_FLAGS) \$^\n\n";
+print MAKEFILE "\t\$(CC) -o \$@ \$^ \$(BUILD_FLAGS)\n\n";
 
 my %all_edits = ();
 @all_edits{ keys %replaces } = ();
