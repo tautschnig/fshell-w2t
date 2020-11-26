@@ -287,6 +287,7 @@ foreach my $f (keys %all_edits) {
           my @val = @{ $replaces{$f}{$l}{$s} };
           $val[0] =~ s/'/'"'"'/g;
           $val[0] =~ s/\\/\\\\/g;
+          $val[0] =~ s/\$/\$\$/g;
           $val[0] =~ s/&/\\&/g;
           $val[0] =~ s/\//\\\//g;
           print MAKEFILE "\tmv \$\@ \$\@_\n";
@@ -302,12 +303,15 @@ foreach my $f (keys %all_edits) {
         print MAKEFILE "\tmv \$\@ \$\@_\n";
         $replaces{$f}{$l}{$s} =~ s/'/'"'"'/g;
         $replaces{$f}{$l}{$s} =~ s/\\/\\\\/g;
+        $replaces{$f}{$l}{$s} =~ s/\$/\$\$/g;
         $replaces{$f}{$l}{$s} =~ s/&/\\&/g;
         $replaces{$f}{$l}{$s} =~ s/\//\\\//g;
+        my $sym = $s;
+        $sym =~ s/\$/\$\$/g;
         if ($^O eq "darwin") {
-          print MAKEFILE "\tsed '$l s/[[:<:]]$s\[[:>:]\]/ $replaces{$f}{$l}{$s}/' \$\@_ > \$\@\n";
+          print MAKEFILE "\tsed '$l s/[[:<:]]$sym\[[:>:]\]/ $replaces{$f}{$l}{$s}/' \$\@_ > \$\@\n";
         } else {
-          print MAKEFILE "\tsed '$l s/\\<$s\\>/ $replaces{$f}{$l}{$s}/' \$\@_ > \$\@\n";
+          print MAKEFILE "\tsed '$l s/\\<$sym\\>/ $replaces{$f}{$l}{$s}/' \$\@_ > \$\@\n";
         }
         print MAKEFILE "\trm \$\@_\n";
       }
@@ -320,6 +324,7 @@ foreach my $f (keys %all_edits) {
     foreach my $i (@{ $inserts{$f} }) {
       $i =~ s/'/'"'"'/g;
       $i =~ s/\\/\\\\/g;
+      $i =~ s/\$/\$\$/g;
       print MAKEFILE "\techo '$i' >> \$\@\n";
     }
     print MAKEFILE "\tcp \$\@ harness.c\n";
@@ -331,6 +336,7 @@ foreach my $f (keys %all_edits) {
     foreach my $i (@{ $func_appends{$f} }) {
       $i =~ s/'/'"'"'/g;
       $i =~ s/\\/\\\\/g;
+      $i =~ s/\$/\$\$/g;
       print MAKEFILE "\techo '$i' >> \$\@\n";
       print MAKEFILE "\techo '$i' >> harness.c\n";
     }
@@ -342,6 +348,7 @@ foreach my $f (keys %all_edits) {
     foreach my $a (@{ $appends{$f}{lines} }) {
       $a =~ s/'/'"'"'/g;
       $a =~ s/\\/\\\\/g;
+      $a =~ s/\$/\$\$/g;
       print MAKEFILE "\techo '  $a;' >> \$\@\n";
     }
     print MAKEFILE "\techo '}' >> \$\@\n";
@@ -352,6 +359,7 @@ foreach my $f (keys %all_edits) {
     foreach my $a (@{ $global_appends{$f} }) {
       $a =~ s/'/'"'"'/g;
       $a =~ s/\\/\\\\/g;
+      $a =~ s/\$/\$\$/g;
       print MAKEFILE "\techo '  $a;' >> \$\@\n";
     }
   }
