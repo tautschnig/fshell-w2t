@@ -186,7 +186,13 @@ def processWitness(witness, benchmark, bitwidth):
   benchmarkString = ''
   with tempfile.NamedTemporaryFile() as fp:
     # preprocess and remove __attribute__
-    subprocess.check_call(['gcc', '-D__attribute__(x)=', '-x', 'c', '-E', benchmark, '-o', fp.name])
+    # pycparser cannot handle the type spec in va_arg or __builtin_offsetof
+    subprocess.check_call([
+        'gcc',
+        '-D__attribute__(x)=',
+        '-D__builtin_va_arg(a, t)=__builtin_va_arg(a)',
+        '-D__builtin_offsetof(a, t)=0',
+        '-x', 'c', '-E', benchmark, '-o', fp.name])
     with open(fp.name, 'r') as b:
       needStructBody = False
       skipAsm = False
@@ -229,52 +235,6 @@ def processWitness(witness, benchmark, bitwidth):
           line = '\n'
         # remove asm renaming
         line = re.sub(r'__asm__\s*\(""\s+"[a-zA-Z0-9_]+"\)', '', line)
-        # pycparser cannot handle the type spec in va_arg
-        if re.search(r'__builtin_va_arg\s*\([^,]+,[^\)]+\)', line):
-            line = re.sub(r'(__builtin_va_arg\([^,]+),[^\)]+\)', r'\1)', line)
-        elif re.search(r'__builtin_va_arg\s*\(\s*$', line):
-            inVaArg = 1
-        elif inVaArg == 1:
-            inVaArg = 2
-        elif inVaArg == 2:
-            if not re.match(r'^\s*,\s*$', line):
-                inVaArg = 0
-            else:
-                inVaArg = 3
-                line = '\n'
-        elif inVaArg == 3:
-            if re.search(r';\*$', line):
-                inVaArg = 0
-                line = ',' + line
-            else:
-                inVaArg = 4
-                line = '\n'
-        elif inVaArg == 4:
-            assert re.match(r'^\s*\)\s*$', line)
-            inVaArg = 5
-        elif inVaArg == 5:
-            assert re.match(r'^\s*;\s*$', line)
-            inVaArg = 0
-        # pycparser cannot handle the type spec in __builtin_offsetof
-        if re.search(r'__builtin_offsetof\s*\([^,]+,[^\)]+\)', line):
-            line = re.sub(r'__builtin_offsetof\s*\([^,]+,[^\)]+\)', '0', line)
-        elif re.search(r'__builtin_offsetof\s*\(\s*$', line):
-            line = re.sub(r'__builtin_offsetof\s*\(\s*$', '0\n', line)
-            inOffsetOf = 1
-        elif inOffsetOf == 1:
-            inOffsetOf = 2
-            line = '\n'
-        elif inOffsetOf == 2:
-            assert re.match(r'^\s*,\s*$', line)
-            inOffsetOf = 3
-            line = '\n'
-        elif inOffsetOf == 3:
-            inOffsetOf = 4
-            line = '\n'
-        elif inOffsetOf == 4:
-            assert re.match(r'^\s*\)\s*$', line)
-            inOffsetOf = 0
-            line = '\n'
         benchmarkString += line
   parser = ext_c_parser.GnuCParser()
   ast = parser.parse(benchmarkString, filename=benchmark)
