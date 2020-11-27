@@ -111,6 +111,8 @@ def setupWatch(ast, watch):
       if (isinstance(node.name, c_ast.ID) and
           node.name.name.startswith('__VERIFIER_nondet_')):
         l = node.name.coord.line
+        # this assertion could fail if different __VERIFIER_nondet_ calls exist
+        # in the same line (as is the case in diskperf.i.cil-2.c)
         assert self.watch.get(l) is None or self.watch[l] == node.name.name
         self.watch[l] = node.name.name
 
