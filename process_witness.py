@@ -72,7 +72,8 @@ def setupTypes(ast, entryFunc, inputs, nondets, entry, typedefs):
           if isinstance(d, c_ast.Decl):
             info = {}
             typestr = ext_c_generator.GnuCGenerator().visit(d)
-            typestr = re.sub(r'\b%s\b' % re.escape(d.name), '', typestr)
+            if d.name is not None:
+                typestr = re.sub(r'\b%s\b' % re.escape(d.name), '', typestr)
             if typedefs.get(typestr):
                 typestr = typedefs[typestr]
             info['type'] = typestr
