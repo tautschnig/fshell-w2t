@@ -227,17 +227,17 @@ def processWitness(witness, benchmark, bitwidth):
         elif re.match(r'^\s*struct\s+[a-zA-Z0-9_]+\s*{\s*$', line):
           needStructBody = True
         # remove inline asm
-        if re.match(r'^\s*__asm__(\s+volatile)?\s*\("([^"]|\\")*"[^;]*$', line):
+        if re.match(r'^\s*(__)?asm(__)?(\s+volatile)?\s*\("([^"]|\\")*"[^;]*$', line):
           skipAsm = True
         elif skipAsm and re.search(r'\)\s*;\s*$', line):
           line = '\n'
           skipAsm = False
           line = '\n'
         if (skipAsm or
-            re.match(r'^\s*__asm__(\s+volatile)?\s*\("([^"]|\\")*"[^;]*\)\s*;\s*$', line)):
+            re.match(r'^\s*(__)?asm(__)?(\s+volatile)?\s*\("([^"]|\\")*"[^;]*\)\s*;\s*$', line)):
           line = '\n'
         # remove asm renaming
-        line = re.sub(r'__asm__\s*\(""\s+"[a-zA-Z0-9_]+"\)', '', line)
+        line = re.sub(r'\b(__)?asm(__)?\b\s*\(""\s+"[a-zA-Z0-9_]+"\)', '', line)
         benchmarkString += line
   parser = ext_c_parser.GnuCParser()
   ast = parser.parse(benchmarkString, filename=benchmark)
