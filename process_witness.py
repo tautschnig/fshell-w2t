@@ -192,6 +192,7 @@ def processWitness(witness, benchmark, bitwidth):
     subprocess.check_call([
         'gcc',
         '-D__attribute__(x)=',
+        '-D__alignof__(x)=0',
         '-D__builtin_va_arg(a, t)=__builtin_va_arg(a)',
         '-D__builtin_offsetof(a, t)=0',
         '-x', 'c', '-E', benchmark, '-o', fp.name])
