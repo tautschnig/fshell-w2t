@@ -30,7 +30,7 @@ while [ -n "$1" ] ; do
     -m32|-m64) BIT_WIDTH="$1" ; shift 1 ;;
     --propertyfile) PROP_FILE="$2" ; shift 2 ;;
     --graphml-witness) WITNESS_FILE="$2" ; shift 2 ;;
-    --version) echo "0.1" ; exit 0 ;;
+    --version) echo "0.2" ; exit 0 ;;
     --keep-harness) KEEP_HARNESS=1 ; shift 1 ;;
     *) BM="$1" ; shift 1 ;;
   esac
