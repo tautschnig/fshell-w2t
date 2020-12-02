@@ -68,19 +68,20 @@ if [ "$PROP" = "" ] ; then
   exit 1
 fi
 
-if [ ! -d pycparser-master ] ; then
+SCRIPTDIR=$(cd $(dirname $0) ; pwd)
+
+if [ ! -d $SCRIPTDIR/pycparser-master ] ; then
   wget https://codeload.github.com/eliben/pycparser/zip/master \
-    -O pycparser-master.zip
-  unzip pycparser-master.zip
+    -O $SCRIPTDIR/pycparser-master.zip
+  unzip pycparser-master.zip -d $SCRIPTDIR
 fi
 
-if [ ! -d pycparserext-master ] ; then
+if [ ! -d $SCRIPTDIR/pycparserext-master ] ; then
   wget https://codeload.github.com/inducer/pycparserext/zip/master \
-    -O pycparserext-master.zip
-  unzip pycparserext-master.zip
+    -O $SCRIPTDIR/pycparserext-master.zip
+  unzip pycparserext-master.zip -d $SCRIPTDIR
 fi
 
-SCRIPTDIR=$PWD
 DATA=`mktemp -d -t witness.XXXXXX`
 trap "rm -rf $DATA" EXIT
 # echo $DATA
