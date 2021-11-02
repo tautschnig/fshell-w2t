@@ -76,10 +76,10 @@ if [ ! -d $SCRIPTDIR/pycparser-master ] ; then
   unzip pycparser-master.zip -d $SCRIPTDIR
 fi
 
-if [ ! -d $SCRIPTDIR/pycparserext-master ] ; then
-  wget https://codeload.github.com/inducer/pycparserext/zip/master \
-    -O $SCRIPTDIR/pycparserext-master.zip
-  unzip pycparserext-master.zip -d $SCRIPTDIR
+if [ ! -d $SCRIPTDIR/pycparserext-main ] ; then
+  wget https://codeload.github.com/inducer/pycparserext/zip/main \
+    -O $SCRIPTDIR/pycparserext-main.zip
+  unzip pycparserext-main.zip -d $SCRIPTDIR
 fi
 
 DATA=`mktemp -d -t witness.XXXXXX`
@@ -90,7 +90,7 @@ cp "$WITNESS_FILE" "$BM" $DATA
 WITNESS_FILE=`basename "$WITNESS_FILE"`
 BM=`basename "$BM"`
 cd $DATA
-PYTHONPATH=$SCRIPTDIR/pycparserext-master:$SCRIPTDIR/pycparser-master \
+PYTHONPATH=$SCRIPTDIR/pycparserext-main:$SCRIPTDIR/pycparser-master \
   python $SCRIPTDIR/process_witness.py \
   $BIT_WIDTH -w "$WITNESS_FILE" -b "$BM" > data
 $SCRIPTDIR/TestEnvGenerator.pl < data
