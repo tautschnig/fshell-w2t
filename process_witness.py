@@ -39,11 +39,11 @@ def validateConfig(graph, ns, witness, benchmark, bitwidth):
     raise ValueError('Architecture mismatch')
 
   with open(benchmark, 'rb') as b:
-    sha1hash = hashlib.sha1(b.read()).hexdigest()
-    if config['programhash'] != sha1hash:
-      # eprint('INVALID WITNESS FILE: SHA1 mismatch')
+    sha256hash = hashlib.sha256(b.read()).hexdigest()
+    if config['programhash'] != sha256hash:
+      # eprint('INVALID WITNESS FILE: SHA256 mismatch')
       # sys.exit(1)
-      eprint('WARNING: SHA1 mismatch')
+      eprint('WARNING: SHA256 mismatch')
 
   spec = re.sub(r'\s+', '', config['specification'])
   spec = re.sub(r'\n', '', spec)
