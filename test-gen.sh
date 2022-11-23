@@ -91,7 +91,7 @@ WITNESS_FILE=`basename "$WITNESS_FILE"`
 BM=`basename "$BM"`
 cd $DATA
 PYTHONPATH=$SCRIPTDIR/pycparserext-main:$SCRIPTDIR/pycparser-master \
-  python $SCRIPTDIR/process_witness.py \
+  python3 $SCRIPTDIR/process_witness.py \
   $BIT_WIDTH -w "$WITNESS_FILE" -b "$BM" > data
 $SCRIPTDIR/TestEnvGenerator.pl < data
 

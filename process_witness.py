@@ -1,6 +1,5 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-from __future__ import print_function
 from pycparser import c_ast, parse_file
 from pycparserext import ext_c_generator, ext_c_parser
 
